@@ -1,6 +1,6 @@
 {
   "name": "whale-memory",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "会记得你的鲸鱼 · 拿得出原话的记忆内核。句级原文回溯 + 双写账本 + 三档门控主动提话。",
   "license": "MIT",
   "author": "会记得你的鲸鱼 contributors",

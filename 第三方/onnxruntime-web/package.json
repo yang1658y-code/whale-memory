@@ -1,0 +1,5 @@
+{
+  "type": "commonjs",
+  "private": true,
+  "_说明": "运行集是 CJS 打包的 ort.min.js；不写这个文件，Node 会按上层插件的 type:module 当 ESM 解析，export 全空 → 报 InferenceSession undefined"
+}

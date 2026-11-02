@@ -1,0 +1,38 @@
+# 会记得你的鲸鱼 · DSH 接管 patch
+#
+# 这个文件是「绝不让 DSH 按它自己的标准摘要」+「让模型记得起原话」的硬开关。
+#
+#   ① 把官方摘要后端 @deepseek-ai/dsh-compaction-basic 的插件节点禁掉。
+#      不禁的话，两个 compaction 服务抢同一个 ctx.compaction，
+#      谁赢看加载顺序——把「会不会被摘要」交给运气，不行。
+#
+#   ② 挂上我们的压缩引擎（whale-memory-dsh 的默认入口）。
+#      它确实 import 了 compaction-basic 这个包，但只当**库**用
+#      （继承它的表层事务与锁，只覆盖 summarize），不作为插件节点挂载，
+#      所以不会产生第二个 compaction 服务。
+#
+#   ③ 挂上我们的记忆注入插件（whale-memory-dsh/memory）。
+#      它站在官方开放的 agent/pre-step 门上：模型收到请求之前，
+#      把内核记得的原话追加成一条 user 消息。只追加，不改任何已有消息。
+#      与 ② 分工：②管历史怎么退场，③管历史怎么上场。
+#
+# 顺序依赖：dsh.profile.bundles 里本包必须排在 @deepseek-ai/dsh-base 之后
+# （patch 层按 bundles 顺序叠加，后叠的才能覆盖前者的节点）。
+
+- id: compaction-basic
+  disabled: true
+
+- insert:
+    - id: whale-memory-compaction
+      name: 'whale-memory-dsh'
+
+    - id: whale-memory-recall
+      name: 'whale-memory-dsh/memory'
+      config:
+        # 主键为英文（npm 包给全世界的，别人照 README 抄不会错）
+        enabled: true          # 总开关
+        everyTurn: true        # 只在「本步有新用户输入」时检索（省 token、保 KV 前缀）
+        maxInjectChars: 900    # 注入文本硬上限（字符）
+        contextPairs: 1        # 翻原话时带上前后各几叵
+        # 中文键仍认（老配置零改动用），与上面四个一一对应：
+        # 启用 / 每轮一次 / 最大注入字符 / 上下句数

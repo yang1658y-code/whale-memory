@@ -1,0 +1,67 @@
+{
+  "name": "whale-memory",
+  "version": "0.1.0",
+  "description": "会记得你的鲸鱼 · 拿得出原话的记忆内核。句级原文回溯 + 双写账本 + 三档门控主动提话。",
+  "license": "MIT",
+  "author": "会记得你的鲸鱼 contributors",
+  "main": "内核/存储适配器.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yang1658y-code/whale-memory.git"
+  },
+  "homepage": "https://github.com/yang1658y-code/whale-memory#readme",
+  "bugs": {
+    "url": "https://github.com/yang1658y-code/whale-memory/issues"
+  },
+  "keywords": [
+    "memory",
+    "llm",
+    "chatbot",
+    "whale",
+    "pet",
+    "original-text",
+    "recall"
+  ],
+  "files": [
+    "内核/",
+    "面板/",
+    "适配器/",
+    "上手/",
+    "配置/内核参数.json",
+    "配置/门控策略.json",
+    "配置/词表.json",
+    "配置/llm.example.json",
+    "配置/qq.example.json",
+    "验收/",
+    "文档/",
+    "模型/",
+    "第三方/",
+    "!**/*.bak",
+    "!**/*.bak2",
+    "!**/*.bak-*",
+    "!**/*.tmp-*",
+    "!验收/临时/",
+    "!验收/*结果.json",
+    "!验收/日志-*.txt",
+    "!适配器/dsh/数据/",
+    "!**/.DS_Store",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node 验收/一键跑.js",
+    "panel": "node 面板/服务.js",
+    "selfcheck": "node 验收/一键跑.js",
+    "vector": "node 验收/向量小模型验收.js",
+    "qq": "node 适配器/qq/主.js",
+    "qq:dry": "node 适配器/qq/主.js --dry",
+    "qq:test": "node 验收/QQ适配验收.js",
+    "health": "node -e \"console.log(JSON.stringify(require('./内核/存储适配器.js').健康自检(),null,2))\""
+  }
+}

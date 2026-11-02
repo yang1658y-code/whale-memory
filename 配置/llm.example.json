@@ -1,0 +1,8 @@
+{
+  "说明": "复制为 配置/llm.json 后填入你自己的 key。不填也能跑：自动降级为「只查记忆」模式，照样能把你的原话念出来。",
+  "地址": "https://api.deepseek.com/v1/chat/completions",
+  "密钥": "在这里填你的 key，形如 sk-xxxxxxxx",
+  "模型": "deepseek-chat",
+  "温度": 0.6,
+  "超时毫秒": 30000
+}

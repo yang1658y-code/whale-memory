@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>会记得你的鲸鱼 · 内核面板</title>
+<style>
+  :root{
+    --bg:#0a1017;
+    --bg2:#0e1822;
+    --card:rgba(255,255,255,.045);
+    --card2:rgba(255,255,255,.075);
+    --line:rgba(255,255,255,.09);
+    --line2:rgba(255,255,255,.16);
+    --文字:#e8eef5;
+    --次:#93a4b8;
+    --弱:#63758a;
+    --主:#4ea8ff;
+    --主2:#7ee0c8;
+    --警:#ffb454;
+    --危:#ff6b6b;
+    --好:#4ade80;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 600px at 12% -10%, rgba(78,168,255,.16), transparent 60%),
+      radial-gradient(900px 600px at 100% 0%, rgba(126,224,200,.10), transparent 55%),
+      var(--bg);
+    color:var(--文字);
+    font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .壳{max-width:1080px;margin:0 auto;padding:28px 22px 90px}
+
+  /* ── 顶部 ── */
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:18px}
+  .牌{display:flex;align-items:center;gap:13px}
+  .鲸{font-size:34px;line-height:1;filter:drop-shadow(0 6px 18px rgba(78,168,255,.45))}
+  h1{margin:0;font-size:21px;font-weight:650;letter-spacing:.4px}
+  .副{color:var(--次);font-size:12.5px;margin-top:3px}
+  .胶囊{display:flex;gap:8px;flex-wrap:wrap}
+  .丸{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:5px 11px;border-radius:999px;
+    background:var(--card);border:1px solid var(--line);
+    font-size:12px;color:var(--次);white-space:nowrap;
+  }
+  .丸 b{color:var(--文字);font-weight:600}
+  .点{width:6px;height:6px;border-radius:50%;background:var(--好);box-shadow:0 0 8px var(--好)}
+  .点.警{background:var(--警);box-shadow:0 0 8px var(--警)}
+  .点.危{background:var(--危);box-shadow:0 0 8px var(--危)}
+
+  /* ── 页签 ── */
+  nav{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:26px;overflow-x:auto}
+  nav button{
+    appearance:none;background:none;border:0;color:var(--次);
+    padding:11px 15px;font:inherit;font-size:14px;cursor:pointer;
+    border-bottom:2px solid transparent;transition:.16s;white-space:nowrap;
+  }
+  nav button:hover{color:var(--文字)}
+  nav button.活{color:var(--主);border-bottom-color:var(--主)}
+  nav button .数{font-size:11px;opacity:.7;margin-left:5px}
+
+  /* ── 通用块 ── */
+  section{display:none;animation:淡入 .22s ease}
+  section.活{display:block}
+  @keyframes 淡入{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  h2{font-size:15px;font-weight:600;margin:0 0 12px;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+  h2 .小{font-size:11.5px;color:var(--弱);font-weight:400;letter-spacing:0}
+  .卡{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .栅{display:grid;gap:12px}
+  .提示{color:var(--次);font-size:13px}
+  .灰{color:var(--弱)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:5px}
+
+  /* ── 总览 ── */
+  .统计{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:20px}
+  .数卡{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;position:relative;overflow:hidden}
+  .数卡:after{content:'';position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--主),transparent);opacity:.55}
+  .数卡 .名{font-size:12px;color:var(--次);margin-bottom:7px}
+  .数卡 .值{font-size:25px;font-weight:650;letter-spacing:.5px;font-variant-numeric:tabular-nums}
+  .数卡 .值 small{font-size:13px;color:var(--次);font-weight:400;margin-left:3px}
+  .数卡 .注{font-size:11.5px;color:var(--弱);margin-top:5px}
+
+  .十层{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .层丸{font-size:11.5px;padding:4px 9px;border-radius:7px;background:rgba(78,168,255,.09);border:1px solid rgba(78,168,255,.22);color:#a9d3ff}
+  .层丸 i{font-style:normal;color:var(--弱);font-size:10px;margin-right:5px;font-family:ui-monospace,Menlo,monospace}
+  /* 通用模式不露 L 编号与技术细节；切到专业版才出来（body.专） */
+  body:not(.专) .层丸 i{display:none}
+  body:not(.专) #链路 details{display:none}
+
+  /* ── 翻原话 ── */
+  .搜{display:flex;gap:9px;margin-bottom:12px}
+  .搜 input{
+    flex:1;padding:12px 15px;border-radius:11px;font:inherit;
+    background:rgba(0,0,0,.28);border:1px solid var(--line2);color:var(--文字);outline:none;
+  }
+  .搜 input:focus{border-color:var(--主);box-shadow:0 0 0 3px rgba(78,168,255,.14)}
+  .btn{
+    appearance:none;cursor:pointer;font:inherit;font-size:14px;
+    padding:11px 18px;border-radius:11px;border:1px solid var(--line2);
+    background:var(--card2);color:var(--文字);transition:.16s;white-space:nowrap;
+  }
+  .btn:hover{background:rgba(255,255,255,.12);border-color:var(--line2)}
+  .btn.主{background:linear-gradient(180deg,#4ea8ff,#2f86e0);border-color:#5cb2ff;color:#04131f;font-weight:650}
+  .btn.主:hover{filter:brightness(1.08)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .例{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px}
+  .例 span{
+    font-size:12px;padding:5px 11px;border-radius:999px;cursor:pointer;
+    background:var(--card);border:1px solid var(--line);color:var(--次);transition:.16s;
+  }
+  .例 span:hover{color:var(--文字);border-color:var(--主)}
+
+  .判{display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border-radius:12px;margin-bottom:16px;font-size:13.5px;border:1px solid}
+  .判.开{background:rgba(74,222,128,.08);border-color:rgba(74,222,128,.3)}
+  .判.关{background:rgba(255,255,255,.04);border-color:var(--line)}
+  .判 .标{font-weight:650;white-space:nowrap}
+  .判.开 .标{color:var(--好)}
+
+  .候选{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 17px;margin-bottom:12px}
+  .候选 .头{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:9px}
+  .句{font-size:16.5px;line-height:1.55;font-weight:550;color:#fff}
+  .句 mark{background:rgba(78,168,255,.22);color:#cfe8ff;border-radius:4px;padding:0 3px}
+  .元{font-size:11.5px;color:var(--弱);display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+  .元 b{color:var(--次);font-weight:500}
+  .分{font-size:12px;color:var(--次);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .分 i{font-style:normal;color:var(--主2)}
+  details{margin-top:9px}
+  details summary{cursor:pointer;color:var(--次);font-size:12.5px;list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary:before{content:'▸ ';color:var(--弱)}
+  details[open] summary:before{content:'▾ '}
+  .上下{margin-top:9px;padding-left:11px;border-left:2px solid var(--line2);font-size:13px;color:var(--次)}
+  .上下 div{margin:4px 0}
+  .上下 .谁{color:var(--弱);font-size:11.5px;margin-right:7px}
+  .上下 .己{color:var(--文字)}
+
+  /* ── 拧参数 ── */
+  .三层{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:24px}
+  .层卡{background:linear-gradient(160deg,rgba(78,168,255,.10),rgba(255,255,255,.03));border:1px solid var(--line);border-radius:14px;padding:16px}
+  .层卡 .H{font-size:14px;font-weight:600;margin-bottom:4px}
+  .层卡 .D{font-size:12px;color:var(--次);line-height:1.5;min-height:36px}
+  .层卡 .F{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
+  .党{
+    font-size:12px;padding:6px 12px;border-radius:9px;cursor:pointer;transition:.16s;
+    background:rgba(0,0,0,.22);border:1px solid var(--line2);color:var(--次);
+  }
+  .党:hover{color:var(--文字)}
+  .党.活{background:rgba(78,168,255,.18);border-color:var(--主);color:#bfe0ff;font-weight:600}
+  .党.活.险{background:rgba(255,180,84,.16);border-color:var(--警);color:#ffd39c}
+
+  .组{margin-bottom:22px}
+  .组>h3{font-size:13px;font-weight:600;color:#a9c4e0;margin:0 0 9px;letter-spacing:.4px;display:flex;align-items:center;gap:8px}
+  .组>h3 .数{font-size:11px;color:var(--弱);font-weight:400}
+  .组>h3 .副{font-size:11.5px;color:var(--弱);font-weight:400;padding-left:9px;border-left:1px solid var(--line2);margin-left:2px}
+  .行{
+    display:grid;grid-template-columns:minmax(150px,1.15fr) minmax(96px,.6fr) auto;
+    gap:10px 14px;align-items:start;
+    padding:12px 14px;border-radius:11px;background:var(--card);border:1px solid var(--line);
+    margin-bottom:7px;
+  }
+  .行.dirty{border-color:rgba(255,180,84,.5);background:rgba(255,180,84,.055)}
+  .行.锁{opacity:.62}
+  .行 .名{font-size:13.5px;font-weight:550;line-height:1.45}
+  .行 .名 .键{display:block;font-size:10.5px;color:var(--弱);font-family:ui-monospace,Menlo,monospace;margin-top:2px;font-weight:400}
+  .行 .注{grid-column:1/-1;font-size:12px;color:var(--次);line-height:1.6}
+  .行 .注 .影{color:var(--弱)}
+  .行 .注 .影 b{color:#b9cde1;font-weight:500}
+  .行 .控{display:flex;align-items:center;gap:7px}
+  .行 input[type=number],.行 select{
+    width:96px;padding:7px 9px;border-radius:8px;font:inherit;font-size:13px;
+    background:rgba(0,0,0,.3);border:1px solid var(--line2);color:var(--文字);outline:none;
+    font-variant-numeric:tabular-nums;
+  }
+  .行 select{width:auto;min-width:96px}
+  .行 input:focus,.行 select:focus{border-color:var(--主)}
+  .行 .值默{font-size:11px;color:var(--弱);white-space:nowrap}
+  .开关{position:relative;width:42px;height:23px;border-radius:999px;background:rgba(255,255,255,.13);cursor:pointer;transition:.18s;border:1px solid var(--line2);flex:0 0 auto}
+  .开关:after{content:'';position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#8fa2b6;transition:.18s}
+  .开关.开{background:rgba(78,168,255,.35);border-color:var(--主)}
+  .开关.开:after{left:21px;background:var(--主)}
+  .锁标{font-size:11px;color:var(--警);border:1px solid rgba(255,180,84,.35);border-radius:6px;padding:3px 7px;white-space:nowrap}
+
+  /* ── 两档：通用版 / 专业版 ── */
+  .模条{
+    display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:18px;
+    background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;
+  }
+  .模{
+    font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer;transition:.16s;
+    background:rgba(0,0,0,.22);border:1px solid var(--line2);color:var(--次);
+  }
+  .模:hover{color:var(--文字)}
+  .模.活{background:rgba(78,168,255,.18);border-color:var(--主);color:#bfe0ff;font-weight:600}
+  .模 em{font-style:normal;font-size:11px;color:var(--弱);margin-left:6px;font-weight:400}
+  .模.活 em{color:#8fbde8}
+  .模说{font-size:12px;color:var(--弱);line-height:1.6;flex:1 1 260px;min-width:200px}
+  .通卡{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:9px}
+  .通卡.dirty{border-color:rgba(255,180,84,.5);background:rgba(255,180,84,.055)}
+  .通头{display:flex;align-items:center;justify-content:space-between;gap:14px}
+  .通名{font-size:14.5px;font-weight:550;line-height:1.4}
+  .通值{font-size:13.5px;color:var(--主2);font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .通卡 .滑{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:10px 0 0;cursor:pointer;display:block}
+  .通卡 .滑::-webkit-slider-runnable-track{height:5px;border-radius:999px;background:rgba(255,255,255,.14)}
+  .通卡 .滑::-webkit-slider-thumb{
+    -webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--主);
+    border:2px solid #0a1017;margin-top:-6px;box-shadow:0 0 0 1px rgba(78,168,255,.45);
+  }
+  .通卡 .滑::-moz-range-track{height:5px;border-radius:999px;background:rgba(255,255,255,.14)}
+  .通卡 .滑::-moz-range-thumb{width:15px;height:15px;border:2px solid #0a1017;border-radius:50%;background:var(--主)}
+  .通说{font-size:12.5px;color:var(--次);line-height:1.68;margin-top:9px}
+  .通脚{font-size:10.5px;color:var(--弱);font-family:ui-monospace,Menlo,monospace;margin-top:8px}
+  .通脚 b{color:var(--弱);font-weight:600;font-family:inherit;opacity:.85}
+  .通档{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
+  .尾说{margin:4px 0 20px}
+
+  .底{
+    position:sticky;bottom:0;z-index:9;margin:24px -22px -90px;
+    padding:14px 22px;display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;
+    background:linear-gradient(180deg,rgba(10,16,23,0),rgba(10,16,23,.94) 42%);
+    backdrop-filter:blur(8px);
+  }
+  .底 .左{font-size:12.5px;color:var(--次)}
+  .底 .左 b{color:var(--警)}
+
+  /* ── 自检 ── */
+  .终端{
+    background:#060b11;border:1px solid var(--line);border-radius:12px;padding:15px 17px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.62;
+    color:#b8c9da;white-space:pre-wrap;word-break:break-word;max-height:60vh;overflow:auto;margin-top:14px;
+  }
+  .吐{color:var(--次);text-align:center;padding:26px 0;font-size:13px}
+  .旋转{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--主);border-radius:50%;animation:转 .7s linear infinite;vertical-align:-2px;margin-right:7px}
+  @keyframes 转{to{transform:rotate(360deg)}}
+  .果{display:flex;align-items:center;gap:10px;font-size:14px;margin-top:12px}
+  .果.好{color:var(--好)} .果.坏{color:var(--危)}
+  @media(max-width:640px){
+    .行{grid-template-columns:1fr}
+    .行 .控{justify-self:start}
+    .壳{padding:20px 14px 80px}
+    .底{margin:24px -14px -80px;padding:12px 14px}
+  }
+</style>
+</head>
+<body>
+<div class="壳">
+
+  <header>
+    <div class="牌">
+      <div class="鲸">🐋</div>
+      <div>
+        <h1>会记得你的鲸鱼 · 内核面板</h1>
+        <div class="副">拿得出原话的记忆内核 · L0–L8 十层 · MIT</div>
+      </div>
+    </div>
+    <div class="胶囊" id="胶囊"><span class="丸">载入中…</span></div>
+  </header>
+
+  <nav>
+    <button class="活" data-页="总览">总览</button>
+    <button data-页="翻原话">翻原话</button>
+    <button data-页="拧参数">拧参数<span class="数" id="参计数"></span></button>
+    <button data-页="跑自检">跑自检</button>
+  </nav>
+
+  <!-- ══════ 总览 ══════ -->
+  <section class="活" id="页-总览">
+    <div class="栅 统计" id="统计"></div>
+
+    <div class="卡" style="margin-bottom:16px">
+      <h2>这只鲸鱼怎么想的 <span class="小">当前生效的链路状态</span></h2>
+      <div class="提示" id="链路">载入中…</div>
+    </div>
+
+    <div class="卡">
+      <h2>十层内核 <span class="小">每一层都有独立验收，一键跑十层退出码 0</span></h2>
+      <div class="十层">
+        <span class="层丸"><i>L0</i>同一件事别反复念</span><span class="层丸"><i>L1</i>一句话翻回原话</span><span class="层丸"><i>L2</i>原话一字不改地存下</span>
+        <span class="层丸"><i>L3</i>把话变成能比的数字</span><span class="层丸"><i>L4</i>两路找法对账</span><span class="层丸"><i>L5</i>把握不住就不开口</span>
+        <span class="层丸"><i>L5b</i>不把问句当回忆</span><span class="层丸"><i>L6</i>接得上微信 QQ</span><span class="层丸"><i>L7</i>聊再长也不丢原话</span>
+        <span class="层丸"><i>L8</i>把原话递回对话</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════ 翻原话 ══════ -->
+  <section id="页-翻原话">
+    <div class="搜">
+      <input id="问" placeholder="问一句它可能记得的话，比如：我的猫叫什么" autocomplete="off">
+      <button class="btn 主" id="翻">翻原话</button>
+    </div>
+    <div class="例">
+      <span data-问="我的猫叫什么">我的猫叫什么</span>
+      <span data-问="我最喜欢的动物">我最喜欢的动物</span>
+      <span data-问="豆豆">豆豆</span>
+      <span data-问="123">123</span>
+    </div>
+    <div id="翻出"><div class="吐">上面随便点一个，看它怎么从一句话找回到那句原话。</div></div>
+  </section>
+
+  <!-- ══════ 拧参数 ══════ -->
+  <section id="页-拧参数">
+    <div class="模条" id="模式条"></div>
+    <div class="三层" id="三开关"></div>
+    <div id="参数区"><div class="吐">载入参数…</div></div>
+  </section>
+
+  <!-- ══════ 跑自检 ══════ -->
+  <section id="页-跑自检">
+    <div class="卡">
+      <h2>一键跑十层 <span class="小">等同于命令行 npm run selfcheck，约 30 秒</span></h2>
+      <div class="提示">跑的是真验收：10 个脚本、几百条断言、随包 bge-small-zh 真推理。全绿才算数。</div>
+      <div style="margin-top:15px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn 主" id="跑">开始跑</button>
+        <span class="灰" id="跑提"></span>
+      </div>
+      <div id="跑果"></div>
+      <pre class="终端" id="终" style="display:none"></pre>
+    </div>
+  </section>
+
+  <div class="底" id="底" style="display:none">
+    <div class="左" id="底左">没有未保存的改动</div>
+    <div style="display:flex;gap:9px">
+      <button class="btn" id="撤">撤销改动</button>
+      <button class="btn 主" id="存">保存并生效</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict'
+
+const $ = s => document.querySelector(s)
+const $$ = s => Array.from(document.querySelectorAll(s))
+const 转义 = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
+
+// ── 页签 ──
+function 切页(名){
+  Array.from(document.querySelectorAll('nav button')).forEach(x => x.classList.toggle('活', x.dataset.页 === 名))
+  Array.from(document.querySelectorAll('section')).forEach(s => s.classList.toggle('活', s.id === '页-' + 名))
+  $('#底').style.display = (名 === '拧参数') ? 'flex' : 'none'
+}
+Array.from(document.querySelectorAll('nav button')).forEach(b => b.onclick = () => {
+  切页(b.dataset.页)
+  try {
+    const u = new URL(location.href)
+    u.searchParams.set('页', b.dataset.页)
+    history.replaceState(null, '', u)
+  } catch(e){}
+})
+// 直开某一页：?页=拧参数（方便分享链接、截图、把用户直接扔到靶心上）
+try {
+  const 初页 = new URLSearchParams(location.search).get('页')
+  if(初页 && Array.from(document.querySelectorAll('nav button')).some(x => x.dataset.页 === 初页)) 切页(初页)
+} catch(e){}
+
+// ── 接口 ──
+async function 取(路){ const r = await fetch(路); return await r.json() }
+async function 发(路, 体){
+  const r = await fetch(路, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(体||{})})
+  return await r.json()
+}
+
+// ══════════ 总览 ══════════
+async function 载状态(){
+  let d
+  try { d = await 取('/api/state') } catch(e){
+    $('#胶囊').innerHTML = '<span class="丸"><span class="点 危"></span>面板服务没连上</span>'
+    return
+  }
+  const 库 = d.向量库 || {}, 原 = d.原文表 || {}, 参 = d.参数 || {}, 门 = d.门控 || {}, 后 = d.后端 || {}
+  const 注 = 后.注入 ? '真语义' : '哈希兜底'
+  $('#胶囊').innerHTML = [
+    `<span class="丸"><span class="点 ${后.注入 ? '' : '警'}"></span>后端 <b>${转义(注)}</b></span>`,
+    `<span class="丸">档位 <b>${转义(门.档位 || '—')}</b></span>`,
+    `<span class="丸">v${转义(d.版本 || '—')}</span>`
+  ].join('')
+
+  $('#统计').innerHTML = [
+    数卡('记住的事', 库.条数 != null ? 库.条数 : '—', '条', '可整句想起 · ' + 转义(库.体积可读 || '—')),
+    数卡('原话句数', 原.句数 != null ? 原.句数 : '—', '句', '一字不改的原始记录'),
+    数卡('聊过的会话', 原.会话数 != null ? 原.会话数 : '—', '个', '换会话也翻得回来'),
+    数卡('占用体积', 转义(String(库.体积可读 || '—').replace(/\s.*$/, '')), '', 转义(String(库.体积可读 || '').split(' ')[1] || '')),
+    数卡('改过的旋钮', 参.已改 != null ? 参.已改 : '—', '/' + (参.总数 || 0), '共 ' + (参.总数 || 0) + ' 个可拧')
+  ].join('')
+
+  const 生效门 = (门.生效门 || []).join(' + ') || '—'
+  const 档 = 转义(门.档位 || '—')
+  // 首屏先给一句人话（小白读得懂）；gate 名、维度、模型 ID 收进折叠——
+  // 想看的人一下就能展开，不想看的人不被技术词砸到。
+  $('#链路').innerHTML =
+    `<div style="line-height:1.85">它现在：把你说过的话存成<b>能整句念回来的原话</b>；当你聊到相关的事，它会先对上<b>两种不同的找法</b>，都指向同一句旧话才敢开口——` +
+    `现在是「<b>${档名(档)}</b>」，生效 ${(门.生效门 || []).length} 道关。</div>` +
+    `<details style="margin-top:8px"><summary>技术细节（嵌入后端 / 生效规则）</summary>` +
+    `<div style="margin-top:6px;line-height:1.8;font-size:12.5px">嵌入后端：<code>${转义(后.模型ID || '—')}</code> · ${转义(String(后.维度 || '—'))} 维 · ${转义(后.模式 || '—')}` +
+    `<br>提话档位：<b>${档}</b> → 生效的判定：<code>${转义(生效门)}</code></div></details>` +
+    (门.降档 ? `<br><span style="color:var(--警)">⚠ 已因标定不符被强制降档：${转义((门.告警||[]).join('；') || '')}</span>` : '')
+}
+function 数卡(名, 值, 单, 注){
+  return `<div class="数卡"><div class="名">${转义(名)}</div><div class="值">${转义(值)}<small>${转义(单||'')}</small></div><div class="注">${转义(注||'')}</div></div>`
+}
+
+// ══════════ 翻原话 ══════════
+async function 翻(){
+  const 文 = $('#问').value.trim()
+  if(!文){ $('#问').focus(); return }
+  $('#翻').disabled = true
+  $('#翻出').innerHTML = '<div class="吐"><span class="旋转"></span>正在走真实链路：过滤 → 两路召回 → RRF → 门控…</div>'
+  let d
+  try { d = await 发('/api/recall', {文本:文}) }
+  catch(e){ $('#翻出').innerHTML = '<div class="吐">请求失败：' + 转义(e.message) + '</div>'; $('#翻').disabled = false; return }
+  $('#翻').disabled = false
+  if(!d.ok){ $('#翻出').innerHTML = '<div class="吐">' + 转义(d.原因 || '没翻出来') + '</div>'; return }
+
+  const 门 = d.门控 || {}, 诊 = d.诊断 || {}
+  const 通 = 状态记.模式 !== '专业'
+  let h = ''
+  // 门控理由原文里带着 cross3 / 交集数=3 ≥ 3 这类术语。
+  // 通用模式给一句人话结论，原文收进折叠；专业模式原样展示。
+  const 理由原文 = String(门.理由 || '')
+  const 理由人话 = 理由原文
+    .replace(/cross3/g, '两路找法都指向同一句')
+    .replace(/cosine_literal/g, '字面几乎逐字一致')
+    .replace(/cosine_rewrite/g, '意思相近')
+    .replace(/交集数=\s*(\d+)\s*≥\s*(\d+)/g, '两种找法各进前 $2 名、共 $1 处对上')
+    .replace(/档位=\s*standard/g, '档位=标准')
+    .replace(/档位=\s*quiet/g, '档位=安静')
+    .replace(/档位=\s*active/g, '档位=活跃')
+    .replace(/命中\s*gate「([^」]+)」/g, '通过关卡「$1」')
+    .replace(/\bgate\b/gi, '关卡')
+  h += `<div class="判 ${门.开口 ? '开' : '关'}">
+    <span class="标">${门.开口 ? '会开口提' : '不开口'}</span>
+    <span>${通 ? 转义(理由人话) : 转义(理由原文)}</span>
+  </div>`
+
+  if(!d.候选.length){
+    h += `<div class="吐">这条链路上没找到候选。${(诊.降级||[]).length ? '<br><span class="灰">' + 转义(诊.降级.join('；')) + '</span>' : ''}</div>`
+  } else {
+    h += 通
+      ? `<div class="提示" style="margin-bottom:11px">
+           两种找法分别找了 <b>${诊.向量条数||0}</b> 条、<b>${诊.关键词条数||0}</b> 条，
+           合起来 <b>${诊.融合条数||0}</b> 条候选，其中 <b>${诊.交集条数||0}</b> 条两边都对上了（各取前 ${诊.前N||0} 名比）· 耗时 ${d.耗时毫秒}ms
+         </div>`
+      : `<div class="提示" style="margin-bottom:11px">
+           两路召回：向量 <b>${诊.向量条数||0}</b> 条 · 关键词 <b>${诊.关键词条数||0}</b> 条 ·
+           融合 <b>${诊.融合条数||0}</b> 条 · 交集 <b>${诊.交集条数||0}</b> 条（前 ${诊.前N||0} 名比）· 耗时 ${d.耗时毫秒}ms
+         </div>`
+    d.候选.forEach((c, i) => {
+      const 原 = c.原话
+      const 前 = (原 && 原.前) || [], 后 = (原 && 原.后) || []
+      h += `<div class="候选">
+        <div class="头">
+          <div class="句">${c.原话 ? 高亮(转义(原.原句), 文) : 转义(c.内容)}</div>
+          <div class="分">${通 ? '' : (c.交集数 != null ? '交集 <i>' + c.交集数 + '</i>' : '')} ${(!通 && c.余弦) ? '· 余弦 <i>' + Number(c.余弦).toFixed(3) + '</i>' : ''}</div>
+        </div>
+        <div class="元">
+          ${c.原话 ? `<span><b>${转义(原.时间)}</b></span><span>会话 <b>${转义(通 ? 短会话(原.会话) : String(原.会话||'').replace(/^qq-单聊-/,''))}</b></span><span>${转义(原.角色||'')}</span>` : `<span>无句ID，翻不出原话</span>`}
+          ${!通 ? `<span>映射 <b>${转义(c.映射方式||'')}</b></span><span>族 <b>${转义(c.族||'')}</b></span>` : `<span>怎么对上的 <b>${转义(对法(c, 诊))}</b></span>`}
+        </div>
+        ${(前.length||后.length) ? `<details><summary>前后各 ${前.length}/${后.length} 句语境</summary><div class="上下">
+          ${前.map(x=>`<div><span class="谁">${转义(x.角色||'')}</span>${转义(x.文本)}</div>`).join('')}
+          <div><span class="谁">${转义(原.角色||'')}</span><span class="己">${转义(原.原句)}</span></div>
+          ${后.map(x=>`<div><span class="谁">${转义(x.角色||'')}</span>${转义(x.文本)}</div>`).join('')}
+        </div></details>` : ''}
+      </div>`
+    })
+  }
+  if((诊.降级||[]).length) h += `<div class="提示 灰" style="margin-top:10px">降级记录：${转义(诊.降级.join('；'))}</div>`
+  $('#翻出').innerHTML = h
+}
+// 会话号是一串哈希，专业版给全的，通用模式只露头尾——看着不碍眼，还能对得上号
+function 短会话(s){
+  const 文 = String(s || '').replace(/^qq-单聊-/, '')
+  if(文.length <= 14) return 文
+  return 文.slice(0, 6) + '…' + 文.slice(-4)
+}
+
+// 通用模式的一句话「怎么对上的」：把内核的黑话翻成人话
+function 对法(c, 诊){
+  const 映射 = String(c.映射方式 || '')
+  const 族 = String(c.族 || '')
+  if(/包含|子串|substring|like/i.test(映射)) return '你这句话里含着它'
+  if(/全等|相等|exact/i.test(映射)) return '话几乎完全一样'
+  if(族 === '字面' || /literal/i.test(族)) return '字面几乎逐字一致'
+  if(族 === '改写' || /rewrite/i.test(族)) return '意思相近'
+  if(c.交集数 != null && Number(c.交集数) > 0) return '两种找法都指向了它'
+  return 映射 || 族 || '—'
+}
+
+function 高亮(已转义, 词){
+  const k = 转义(词 || '').trim()
+  if(!k) return 已转义
+  try { return 已转义.replace(new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'g'), m => '<mark>' + m + '</mark>') } catch(e){ return 已转义 }
+}
+$('#翻').onclick = 翻
+$('#问').onkeydown = e => { if(e.key === 'Enter') 翻() }
+$$('.例 span').forEach(s => s.onclick = () => { $('#问').value = s.dataset.问; 翻() })
+
+// ══════════ 拧参数 ══════════
+// ── 两档模式：通用版（小白）/ 专业版（全参数）──
+// 优先级：URL ?模式= → hash → 上次选过 → 默认通用版。
+// 为何默认通用：第一次打开面板的人应该只看到拧不坏的旋钮。
+const 模式键 = '鲸鱼面板模式'
+let 状态记 = { 内核: [], 门控: [], 档表: {}, 改动: {}, 模式: 定初模式() }
+function 定初模式(){
+  try {
+    const u = new URLSearchParams(location.search).get('模式')
+    if(u === '通用' || u === '专业') return u
+  } catch(e){}
+  try {
+    const h = decodeURIComponent(String(location.hash || '').replace(/^#/, ''))
+    if(h === '通用' || h === '专业') return h
+  } catch(e){}
+  try {
+    const s = localStorage.getItem(模式键)
+    if(s === '通用' || s === '专业') return s
+  } catch(e){}
+  return '通用'
+}
+
+async function 载参数(){
+  let 内核, 门控
+  try { 内核 = await 取('/api/params') } catch(e){ 内核 = {ok:false, 原因:e.message} }
+  try { 门控 = await 取('/api/gate') } catch(e){ 门控 = {ok:false, 原因:e.message} }
+
+  状态记.内核 = (内核.参数 || []).map(p => ({
+    来源:'内核', 键:p.键, 名:p.名, 层:p.层, 类型:p.类型, 最小:p.最小, 最大:p.最大,
+    当前:p.当前, 默认:p.默认, 说明:p.说明, 影响:p.影响, 可调:p.可调,
+    档:p.档 || '专业', 通俗名:p.通俗名 || '', 通俗说明:p.通俗说明 || '', 重要:Number(p.重要) || 0
+  }))
+  状态记.门控 = (门控.项 || []).map(p => ({
+    来源:'门控', 键:p.路径, 名:p.名, 层:p.层, 类型:p.类型, 最小:p.最小, 最大:p.最大,
+    当前:p.当前, 默认:null, 说明:p.说明, 影响:'', 可调:true,
+    档:p.档 || '专业', 通俗名:p.通俗名 || '', 通俗说明:p.通俗说明 || '', 重要:Number(p.重要) || 0
+  }))
+  状态记.档表 = 门控.档表 || {}
+  状态记.改动 = {}
+  渲染底()
+  $('#参计数').textContent = '(' + (状态记.内核.length + 状态记.门控.length) + ')'
+  渲染模式条()
+  渲染三开关()
+  渲染参数()
+}
+
+// 整个参数面板的排序口径：重要度降序（同分保持原序）。
+// 原则：越重要、越常用的应往上放——靠人手记顺序迟早会乱，所以排序列进数据，不靠拼字串。
+function 全部参数(){
+  const 列 = 状态记.内核.concat(状态记.门控)
+  return 列.map((p, i) => ({ p, i }))
+    .sort((a, b) => (b.p.重要 || 0) - (a.p.重要 || 0) || a.i - b.i)
+    .map(x => x.p)
+}
+function 当前值(p){
+  if(Object.prototype.hasOwnProperty.call(状态记.改动, p.键)) return 状态记.改动[p.键]
+  return p.当前
+}
+function 改(p, 值){ 状态记.改动[p.键] = 值; 渲染参数(); 渲染底() }
+
+function 渲染三开关(){
+  const 档 = (状态记.门控.find(p => p.键 === 'profile') || {}).当前 || 'standard'
+  const 隔 = 状态记.门控.find(p => p.键 === '可提话.排除疑问句')
+  const 前后 = 状态记.内核.find(p => p.键 === '原文回溯.前后句数')
+  const 前N = 状态记.内核.find(p => p.键 === '候选映射.前N')
+
+  const 档钮 = Object.keys(状态记.档表).map(k => {
+    const 险 = k === 'active' || k === 'chatty'
+    return `<div class="党 ${k === 档 ? '活' : ''} ${k === 档 && 险 ? '险' : ''}" data-档="${转义(k)}">${转义(档名(k))}</div>`
+  }).join('')
+
+  $('#三开关').innerHTML = `
+    <div class="层卡">
+      <div class="H">记什么</div>
+      <div class="D">哪些话配当记忆被念回来。疑问句、空话、自引默认全拦——不拦就成了复读机。</div>
+      <div class="F">
+        <span class="灰" style="font-size:12px;line-height:1.9">问句拦截：<b style="color:${隔 && 隔.当前 ? 'var(--好)' : 'var(--危)'}">${隔 && 隔.当前 ? '开' : '关'}</b> · 共 ${状态记.门控.filter(p=>p.键.indexOf('可提话.')===0).length} 个开关</span>
+      </div>
+    </div>
+    <div class="层卡">
+      <div class="H">多主动</div>
+      <div class="D">决定它多久主动开口一次。档位越高越爱说话，准确率也越低——这是实测出来的取舍，不是感觉。</div>
+      <div class="F">${档钮}</div>
+    </div>
+    <div class="层卡">
+      <div class="H">多能翻</div>
+      <div class="D">翻原话时的贪心程度：带几句语境、每路召回几条、交集取前几名比。</div>
+      <div class="F"><span class="灰" style="font-size:12px;line-height:1.9">
+        前后语境 <b style="color:var(--文字)">${前后 ? 前后.当前 : '—'}</b> 句 ·
+        交集前 <b style="color:var(--文字)">${前N ? 前N.当前 : '—'}</b> 名
+      </span></div>
+    </div>`
+
+  $$('#三开关 .党').forEach(el => el.onclick = () => {
+    const p = 状态记.门控.find(x => x.键 === 'profile')
+    改(p, el.dataset.档)
+  })
+}
+function 档名(k){
+  return ({quiet:'安静档', standard:'标准档', active:'活跃档', chatty:'话痨档（演练）'})[k] || k
+}
+
+// ── 模式条 ──
+function 渲染模式条(){
+  const 全部 = 全部参数()
+  const 通数 = 全部.filter(p => p.档 === '通用' && p.可调 !== false).length
+  const 通 = 状态记.模式 === '通用'
+  // 总览、十层清单、链路细节也跟着换口调：通用模式下不露 L 编号与 gate 名
+  document.body.classList.toggle('专', !通)
+  $('#模式条').innerHTML = `
+    <button class="模 ${通 ? '活' : ''}" data-模="通用">通用版<em>${通数} 个旋钮 · 看得懂</em></button>
+    <button class="模 ${通 ? '' : '活'}" data-模="专业">专业版<em>${全部.length} 个旋钮 · 全参数</em></button>
+    <span class="模说">${通
+      ? '只摆能随手拧的旋钮：拧错了顶多效果差一点。会让人「它怎么突然提不出话了」的开关，收在专业版里。'
+      : '全部参数开放。每行下面的「拧大拧小会怎样」请先读一遍——有几项一改就会改变成败判定。'}</span>`
+}
+$('#模式条').onclick = e => {
+  const b = e.target.closest('.模')
+  if(!b || b.dataset.模 === 状态记.模式) return
+  状态记.模式 = b.dataset.模
+  try { localStorage.setItem(模式键, 状态记.模式) } catch(e){}
+  try {
+    const u = new URL(location.href)
+    u.searchParams.set('模式', 状态记.模式)
+    history.replaceState(null, '', u)
+  } catch(e){}
+  渲染模式条()
+  渲染参数()
+}
+
+// 通用版的分组：按「你会想调它」的频率排，不按 L0/L4 排。
+// 第一组就是最常动的（它记得多少轮上下文 / 多爱开口），最后一组是“默认全开、基本不用动”的护栏开关。
+const 通用分组 = {
+  '它一次读多少轮上下文': ['近期上下文.轮数'],
+  '它多爱开口': ['profile', '冷却.每小时上限'],
+  '想起旧话时带多少': ['原文回溯.前后句数', '原文回溯.话块间隔秒', '原文回溯.话块最大句'],
+  '翻得准不准': ['原文回溯.topK', '候选映射.前N'],
+  'QQ 里怎么回你': ['qq.入向静默毫秒', 'qq.不分段字数', 'qq.单段最大字数'],
+  '记什么（默认全开，一般不用动）': ['可提话.排除疑问句', '可提话.排除空话', '可提话.排除自引'],
+  '护栏（一般不用动）': ['记忆注入.最大字符', '近期上下文.最大字符']
+}
+const 单位表 = { '近期上下文.轮数': '轮', '近期上下文.最大字符': '字', '原文回溯.前后句数': '句', '原文回溯.topK': '条', '候选映射.前N': '名', '冷却.每小时上限': '次', '记忆注入.最大字符': '字', '原文回溯.话块间隔秒': '秒', '原文回溯.话块最大句': '句',
+  'qq.入向静默毫秒': '毫秒', 'qq.入向最多句数': '句', 'qq.入向去重窗口': '条',
+  'qq.不分段字数': '字', 'qq.单段最大字数': '字', 'qq.单段硬上限': '字', 'qq.最多段数': '段', 'qq.段间隔毫秒': '毫秒' }
+
+function 格式化值(p, v){
+  if(p.类型 === '小数') return Number(v).toFixed(2)
+  const 单 = 单位表[p.键] || ''
+  return String(v) + (单 ? ' ' + 单 : '')
+}
+
+// 通用版里三个开关键：关掉就真会变差，关了得当面说清楚（只在通用版提示，专业版本来就有自己的说明）
+const 关掉会怎样 = {
+  '可提话.排除疑问句': '关掉它，你问「我在忙什么」时，它会把这句话本身当记忆还给你。',
+  '可提话.排除空话': '关掉它，「好的」「嗯嗯」也会被当成回忆接着念。',
+  '可提话.排除自引': '关掉它，你刚说的话会被它当成新发现复述一遍。'
+}
+
+function 渲染通行(p){
+  const 值 = 当前值(p)
+  const 脏 = Object.prototype.hasOwnProperty.call(状态记.改动, p.键) && 状态记.改动[p.键] !== p.当前
+  const 名 = p.通俗名 || p.名
+  const 说 = p.通俗说明 || p.说明 || ''
+  const 键 = 转义(p.键)
+  let 头右 = '', 体 = ''
+  if(p.类型 === '布尔'){
+    头右 = `<div class="开关 ${值 ? '开' : ''}" data-键="${键}" data-类="布尔"></div>`
+  } else if(p.类型 === '枚举'){
+    体 = `<div class="通档">` + Object.keys(状态记.档表).map(k =>
+      `<div class="党 ${k === 值 ? '活' : ''} ${k === 值 && (k === 'active' || k === 'chatty') ? '险' : ''}" data-键="${键}" data-值="${转义(k)}">${转义(档名(k))}</div>`
+    ).join('') + `</div>`
+  } else {
+    const 步 = p.类型 === '小数' ? 0.05 : 1
+    头右 = `<span class="通值" data-值for="${键}">${转义(格式化值(p, 值))}</span>`
+    体 = `<input class="滑" type="range" data-键="${键}" data-类="范围" min="${p.最小}" max="${p.最大}" step="${步}" value="${转义(值)}">`
+  }
+  // 通用版只展示人话：不出现 L0-L5、不出现「门控/候选映射/内核参数」这些工程词。
+  // 键名与来源只给专业版看——工程可对账，小白不被打扰。
+  const 脚 = (p.默认 != null) ? '出厂值 ' + 转义(p.默认) : ''
+  return `<div class="通卡 ${脏 ? 'dirty' : ''}">
+    <div class="通头"><span class="通名">${转义(名)}</span>${头右}</div>
+    ${体}
+    <div class="通说">${转义(说)}</div>
+    ${(p.类型 === '布尔' && !值 && 关掉会怎样[p.键]) ? '<div class="通说" style="color:var(--警)">⚠ ' + 转义(关掉会怎样[p.键]) + '</div>' : ''}
+    ${脚 ? `<div class="通脚">${脚}</div>` : ''}
+  </div>`
+}
+
+function 渲染通用(){
+  const 通用们 = 全部参数().filter(p => p.档 === '通用' && p.可调 !== false)
+  const 已排 = new Set()
+  let h = ''
+  Object.keys(通用分组).forEach(组名 => {
+    const 们 = 通用分组[组名].map(找参数).filter(p => p && p.档 === '通用' && p.可调 !== false)
+    们.forEach(p => 已排.add(p.键))
+    if(!们.length) return
+    h += `<div class="组"><h3>${转义(组名)}<span class="数">${们.length} 项</span></h3>`
+    们.forEach(p => { h += 渲染通行(p) })
+    h += '</div>'
+  })
+  const 余 = 通用们.filter(p => !已排.has(p.键))
+  if(余.length){
+    h += `<div class="组"><h3>其它<span class="数">${余.length} 项</span></h3>`
+    余.forEach(p => { h += 渲染通行(p) })
+    h += '</div>'
+  }
+  if(!h) h = '<div class="吐">没有可显示的通用参数</div>'
+  h += `<div class="提示 灰 尾说">这 ${通用们.length} 个旋钮拧错了顶多效果差一点。全部 ${全部参数().length} 个（含会让它提不出话、或变得乱提的）回上面切「专业版」。</div>`
+  $('#参数区').innerHTML = h
+  绑定通用控件()
+}
+
+function 绑定通用控件(){
+  Array.from(document.querySelectorAll('#参数区 input[type=range]')).forEach(el => {
+    const p = 找参数(el.dataset.键)
+    if(!p) return
+    el.oninput = () => { const v = Number(el.value); if(Number.isFinite(v)) 写值文(p, v) }
+    el.onchange = () => { const v = Number(el.value); if(Number.isFinite(v)) 改(p, v) }
+  })
+  Array.from(document.querySelectorAll('#参数区 .开关')).forEach(el => {
+    const p = 找参数(el.dataset.键)
+    if(!p) return
+    el.onclick = () => 改(p, !当前值(p))
+  })
+  Array.from(document.querySelectorAll('#参数区 .通档 .党')).forEach(el => {
+    const p = 找参数(el.dataset.键)
+    if(!p) return
+    el.onclick = () => 改(p, el.dataset.值)
+  })
+}
+
+function 写值文(p, v){
+  const el = document.querySelector('[data-值for="' + p.键 + '"]')
+  if(el) el.textContent = 格式化值(p, v)
+}
+
+// 专业版分组标题：L 编号留着（工程对账要用），旁边配一句人话。
+// 不把 L 号直接摆给小白看——那是通用版的事。
+const 层副名 = {
+  'L0 冷却': '同一件事别反复念',
+  'L1 原文回溯': '怎么从一句话找回原话',
+  'L2 双写账本': '每句话怎么存下来',
+  'L3 向量': '把话变成能比的数字',
+  'L4 候选映射': '两路找法怎么对账',
+  'L5 门控': '什么时候才该开口',
+  'L6 QQ 适配': '接微信 QQ',
+  'L7 压缩接管': '聊太长时怎么不丢原话',
+  'L8 记忆注入': '怎么把原话递回对话'
+}
+
+function 渲染参数(){
+  if(状态记.模式 === '通用'){
+    $('#三开关').style.display = 'none'
+    return 渲染通用()
+  }
+  $('#三开关').style.display = ''
+  const 组 = {}
+  全部参数().forEach(p => { (组[p.层] = 组[p.层] || []).push(p) })
+  const 序 = ['L0 冷却','L1 原文回溯','L2 双写账本','L3 向量','L4 候选映射','L5 门控','L6 QQ 适配','L7 压缩接管','L8 记忆注入']
+  const 层们 = Object.keys(组).sort((a,b) => {
+    const ia = 序.findIndex(x => String(a).indexOf(x) >= 0), ib = 序.findIndex(x => String(b).indexOf(x) >= 0)
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+  })
+  let h = ''
+  层们.forEach(层 => {
+    h += `<div class="组"><h3>${转义(层)}${层副名[层] ? `<span class="副">${转义(层副名[层])}</span>` : ''}<span class="数">${组[层].length} 条</span></h3>`
+    组[层].forEach(p => { h += 渲染行(p) })
+    h += '</div>'
+  })
+  $('#参数区').innerHTML = h
+  绑定控件()
+}
+
+function 渲染行(p){
+  const 值 = 当前值(p)
+  const 脏 = Object.prototype.hasOwnProperty.call(状态记.改动, p.键) && 状态记.改动[p.键] !== p.当前
+  let 控 = ''
+  if(!p.可调){
+    控 = `<span class="锁标">模型固有 · 不可调</span>`
+  } else if(p.类型 === '布尔'){
+    控 = `<div class="开关 ${值 ? '开' : ''}" data-键="${转义(p.键)}" data-类="布尔"></div>`
+  } else if(p.类型 === '枚举'){
+    const 项 = Object.keys(状态记.档表).map(k => `<option value="${转义(k)}" ${k === 值 ? 'selected' : ''}>${转义(k)}</option>`).join('')
+    控 = `<select data-键="${转义(p.键)}" data-类="枚举">${项}</select>`
+  } else {
+    const 步 = p.类型 === '小数' ? '0.05' : '1'
+    控 = `<input type="number" data-键="${转义(p.键)}" data-类="数" value="${转义(值)}" min="${p.最小}" max="${p.最大}" step="${步}">`
+  }
+  const 默 = (p.默认 != null) ? `<span class="值默">默认 ${转义(p.默认)}</span>` : ''
+  return `<div class="行 ${脏 ? 'dirty' : ''} ${p.可调 === false ? '锁' : ''}">
+    <div class="名">${转义(p.名)}<span class="键">${转义(p.键)}</span></div>
+    <div class="控">${控}${默}</div>
+    <div></div>
+    <div class="注">${转义(p.说明 || '')}
+      ${(p.影响 && p.可调 !== false) ? '<br><span class="影">' + 转义(p.影响) + '</span>' : ''}
+      ${p.可调 === false ? '<br><span class="影" style="color:var(--警)">' + 转义(p.影响) + '</span>' : ''}
+    </div>
+  </div>`
+}
+
+function 绑定控件(){
+  $$('#参数区 input[type=number]').forEach(el => {
+    const p = 找参数(el.dataset.键)
+    el.onchange = () => {
+      let v = Number(el.value)
+      if(!Number.isFinite(v)) return
+      if(p.类型 !== '小数') v = Math.round(v)
+      v = Math.max(p.最小, Math.min(p.最大, v))
+      el.value = v
+      改(p, v)
+    }
+  })
+  $$('#参数区 select').forEach(el => {
+    const p = 找参数(el.dataset.键)
+    el.onchange = () => 改(p, el.value)
+  })
+  $$('#参数区 .开关').forEach(el => {
+    const p = 找参数(el.dataset.键)
+    el.onclick = () => 改(p, !当前值(p))
+  })
+}
+function 找参数(键){ return 全部参数().find(x => x.键 === 键) }
+
+function 渲染底(){
+  const n = Object.keys(状态记.改动).filter(k => {
+    const p = 找参数(k)
+    return p && p.当前 !== 状态记.改动[k]
+  }).length
+  $('#底左').innerHTML = n ? `<b>${n}</b> 项未保存` : '没有未保存的改动'
+  $('#存').disabled = n === 0
+  $('#撤').disabled = n === 0
+}
+
+$('#撤').onclick = () => { 状态记.改动 = {}; 渲染参数(); 渲染三开关(); 渲染底() }
+
+$('#存').onclick = async () => {
+  const 内核改 = {}, 门控改 = []
+  Object.keys(状态记.改动).forEach(k => {
+    const p = 找参数(k)
+    if(!p || p.当前 === 状态记.改动[k]) return
+    if(p.来源 === '内核') 内核改[k] = 状态记.改动[k]
+    else 门控改.push({ 路径:k, 值: 状态记.改动[k] })
+  })
+  $('#存').disabled = true
+  $('#底左').textContent = '正在写盘…'
+  const 报 = []
+  try {
+    if(Object.keys(内核改).length){
+      const r = await 发('/api/params', {值: 内核改})
+      报.push(r.ok ? '内核参数 ' + Object.keys(内核改).length + ' 项已写' : '内核参数失败：' + (r.原因 || '') + (r.拒绝 ? '（' + r.拒绝.map(x=>x.键 + ' ' + x.原因).join('；') + '）' : ''))
+      if(r.联动 && r.联动.已同步) 报.push(r.联动.已同步)
+    }
+    if(门控改.length){
+      const r = await 发('/api/gate', {改动: 门控改})
+      报.push(r.ok ? '门控策略 ' + 门控改.length + ' 项已写' : '门控策略失败：' + (r.原因 || ''))
+    }
+  } catch(e){ 报.push('请求失败：' + e.message) }
+  $('#底左').innerHTML = 转义(报.join(' · ')) + ' <span class="灰">（已热生效，不用重启）</span>'
+  状态记.改动 = {}
+  await 载参数()
+  载状态()
+}
+
+// ══════════ 跑自检 ══════════
+$('#跑').onclick = async () => {
+  $('#跑').disabled = true
+  $('#跑提').innerHTML = '<span class="旋转"></span>正在跑十层，约 30 秒…'
+  $('#跑果').innerHTML = ''
+  $('#终').style.display = 'block'
+  $('#终').textContent = '启动验收…\n'
+  try {
+    const r = await 发('/api/selfcheck', {})
+    $('#终').textContent = r.输出 || '(无输出)'
+    if(r.错误输出) $('#终').textContent += '\n\n[stderr]\n' + r.错误输出
+    $('#跑果').innerHTML = `<div class="果 ${r.ok ? '好' : '坏'}">
+      ${r.ok ? '✓ 十层全绿' : (r.超时 ? '✗ 超时被杀' : '✗ 有层没过（退出码 ' + r.退出码 + '）')}
+      <span class="灰" style="font-size:12.5px">耗时 ${(r.耗时毫秒/1000).toFixed(1)}s · 退出码 ${r.退出码}</span>
+    </div>`
+    $('#跑提').textContent = ''
+  } catch(e){
+    $('#跑果').innerHTML = '<div class="果 坏">请求失败：' + 转义(e.message) + '</div>'
+    $('#跑提').textContent = ''
+  }
+  $('#跑').disabled = false
+}
+
+// ── 启动 ──
+载状态()
+载参数()
+setInterval(() => { if($('#页-总览').classList.contains('活')) 载状态() }, 20000)
+})()
+</script>
+</body>
+</html>

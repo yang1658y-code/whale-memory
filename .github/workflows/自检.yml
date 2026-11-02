@@ -1,0 +1,39 @@
+name: 自检
+
+# 十一层验收跑一遍。给人看的东西只有一个：绿勾或红叉。
+# ⚠️ 本文件加于 2026-11-02，本地 Windows 上十一层全绿；
+#    首次在 GitHub Runner（Ubuntu）上的运行尚未发生——第一次红不一定是代码坏，
+#    也可能是随包 WASM 在 Linux 上的差异，那时把日志贴进 变更记录/ 再修。
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  验收:
+    name: Node ${{ matrix.node }} · 十一层
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+
+      - name: 装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: 版本回显（口径 ≥22，低版立刻看得见）
+        run: node -v && node -e "const m=+process.versions.node.split('.')[0]; if(m<22){console.error('需要 Node 22+');process.exit(1)}"
+
+      - name: 十一层验收（npm test = node 验收/一键跑.js）
+        run: npm test
+
+      - name: 失败时把逐层报告贴到日志
+        if: failure()
+        run: cat 验收/一键跑结果.json || true

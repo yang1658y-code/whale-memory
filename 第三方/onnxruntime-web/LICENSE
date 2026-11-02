@@ -1,0 +1,42 @@
+MIT License
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+来源：onnxruntime-web  v1.31.0-dev.20260914-8d85527a0
+      https://github.com/Microsoft/onnxruntime
+许可：MIT
+
+本目录只保留了 CPU 推理所需的最小运行集（按 scoped 需求裁剪，从 npm 包 dist/ 复制）：
+
+  ort.min.js                    加载器（CJS bundle）
+  ort-wasm-simd-threaded.mjs    ESM 胶水
+  ort-wasm-simd-threaded.wasm   WASM 推理内核（13.60 MB）
+
+刻意未包含（每一项都是几十 MB，且本场景用不到）：
+  ort-wasm-simd-threaded.jsep.wasm      27.0 MB  GPU/WebGPU 用
+  ort-wasm-simd-threaded.asyncify.wasm  25.6 MB  异步化变体
+  ort-wasm-simd-threaded.jspi.wasm      16.0 MB  JSPI 变体
+  其余 dist/*.js（webgl / webnn / training 等构建产物）
+
+npm 官方包完整安装约 138.7 MB，本目录 13.98 MB。
+文件内容未做任何修改，仅做筛选。

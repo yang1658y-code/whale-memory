@@ -1,0 +1,59 @@
+{
+  "name": "whale-memory-dsh",
+  "version": "0.1.0",
+  "description": "会记得你的鲸鱼 · DSH 接管：压缩换成原文归档索引（历史怎么退场）+ pre-step 注入原话（历史怎么上场），原话永不丢",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./memory": "./记忆.js",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "index.js",
+    "记忆.js",
+    "lib/",
+    "cordis.patch.yml",
+    "README.md",
+    "README.en.md",
+    "装.cjs"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "compaction",
+    "memory",
+    "whale"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "_peer为什么写死区间": "接管只靠四个外部契约点（插件节点 id、导出的引擎类、该类上的 summarize 钩子、agent/pre-step 门）。全写 \"*\" 等于说「任何版本都能用」，而实情是只在 0.2.1-rc.2 上真机跑过。写成区间后，宿主跳到 0.3 时 npm 会提醒你——而不是拖下去交给「模型今天好像变笨了」这种信号。",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=0.2.1-rc.2 <0.3.0",
+    "@deepseek-ai/dsh-agent": ">=0.2.1-rc.2 <0.3.0",
+    "@deepseek-ai/dsh-commands": ">=0.2.1-rc.2 <0.3.0",
+    "@deepseek-ai/dsh-compaction": ">=0.2.1-rc.2 <0.3.0",
+    "@deepseek-ai/dsh-compaction-basic": ">=0.2.1-rc.2 <0.3.0",
+    "@deepseek-ai/dsh-llm": ">=0.2.1-rc.2 <0.3.0",
+    "@deepseek-ai/dsh-session": ">=0.2.1-rc.2 <0.3.0",
+    "@deepseek-ai/dsh-token-meter": ">=0.2.1-rc.2 <0.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true },
+    "@deepseek-ai/dsh-agent": { "optional": true },
+    "@deepseek-ai/dsh-commands": { "optional": true },
+    "@deepseek-ai/dsh-compaction": { "optional": true },
+    "@deepseek-ai/dsh-compaction-basic": { "optional": true },
+    "@deepseek-ai/dsh-llm": { "optional": true },
+    "@deepseek-ai/dsh-session": { "optional": true },
+    "@deepseek-ai/dsh-token-meter": { "optional": true }
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

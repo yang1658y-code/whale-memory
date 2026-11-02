@@ -1,0 +1,19 @@
+# 换行与二进制口径 —— 这个文件存在的唯一理由是「跨机器可比」
+#
+# 病根（2026-11-02 实测）：Windows 上 core.autocrlf=true 时，git clone 出来的工作区是 CRLF，
+# 而本机原工作区是 LF。同一个提交、同一份文件、两个机器上 md5 不同 ——
+# 于是 L11 装机体检（逐字节比对装机副本与仓内）在干净 clone 里必然误报「漂移 10 个」。
+# 这不是装机漂了，是换行被 git 改了。源码统一 LF，二进制交给 git 原样存。
+
+* text=auto eol=lf
+
+# 二进制：不转换、不 diff
+*.onnx binary
+*.wasm binary
+*.mjs binary
+*.png binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.woff binary
+*.woff2 binary
